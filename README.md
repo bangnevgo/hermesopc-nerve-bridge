@@ -1,52 +1,137 @@
 # HermesOPC-Nerve-Bridge
 
-Integrasi **Hermes Agent (CLI)** ke dalam **Nerve UI (OpenClaw)** menggunakan arsitektur file-based bridge.
+> ⚠️ **DEPRECATED** — Arsitektur ini sudah tidak digunakan.
+> Lihat [OpenClaw Agent Skills.md](https://github.com/bangnevgo/OpenClaw-Agent-Skills) untuk arsitektur terbaru.
 
-## Arsitektur
-Nerve UI → OpenClaw Agent → incoming/request.json → Bridge Service → Hermes CLI → outgoing/response.json → OpenClaw Agent → Nerve UI
-OpenClaw agent dikonfigurasi via SOUL.md untuk bertindak sebagai jembatan murni — tidak menjawab sendiri, hanya relay ke Hermes.
+---
 
-## Struktur File
-AI-Team/
-├── shared-memory/hermes/
-│   ├── bridge_service.py          # Core bridge: polling incoming, call Hermes CLI
-│   ├── hermes_bridge.py           # Versi alternatif bridge
-│   ├── hermes_bridge_watcher.py   # Watcher variant
-│   ├── hermes_watcher.py          # Watcher variant
-│   ├── SOUL.md                    # Instruksi untuk OpenClaw agent
-│   ├── IDENTITY.md                # Identitas agent
-│   ├── AGENTS.md                  # Daftar agent
-│   ├── BOOTSTRAP.md               # Bootstrap instructions
-│   ├── HEARTBEAT.md               # Heartbeat config
-│   ├── TOOLS.md                   # Tool definitions
-│   ├── USER.md                    # User context
-│   ├── incoming/                  # Request masuk dari Nerve UI
-│   ├── outgoing/                  # Response dari Hermes
-│   └── memory/                    # Persistent memory Hermes
+Integrasi **Hermes Agent (Python CLI)** ke dalam **Nerve UI (OpenClaw)** menggunakan arsitektur file-based bridge.
 
+## Arsitektur Lama (Deprecated)
 
-## Cara Kerja
-
-1. User kirim pesan di Nerve UI
-2. OpenClaw agent (via SOUL.md) tulis `incoming/request.json`
-3. `bridge_service.py` polling setiap 2 detik, deteksi file baru via MD5 hash
-4. Bridge panggil `hermes chat -Q -q "pesan"` via subprocess
-5. Response ditulis ke `outgoing/response_nerve_req.json`
-6. OpenClaw agent baca response dan tampilkan ke user
-
-## Menjalankan Bridge
-
-```bash
-pm2 start ~/AI-Team/shared-memory/hermes/bridge_service.py --name hermes-bridge --interpreter python3
-pm2 save
+```
+Nerve UI → OpenClaw Agent (hermes-aja) → incoming/request.json 
+   → bridge_service.py (polling 2 detik) → Hermes CLI 
+   → outgoing/response_nerve_req.json → OpenClaw Agent → Nerve UI
 ```
 
-## Requirements
+**Masalah dengan arsitektur lama:**
+- Blocking: agent harus tunggu 5 detik
+- Polling: bridge_service.py harus polling terus
+- Fragile: timing-dependent, bisa miss kalau polling slow
+- hermes-aja tidak punya identitas sendiri — hanya relay
 
-- OpenClaw + Nerve UI
-- Hermes Agent CLI (`hermes` tersedia di PATH)
-- Python 3
-- PM2
+---
+
+## Arsitektur Baru (2026-04-27)
+
+```
+HERMES (Brain — Chief of Staff)
+       │
+       │ writes command
+       ▼
+/home/bangnevgo/AI-Team/shared-memory/hermes/out/
+       │
+       │ agent reads at startup
+       ▼
+OPENCLAW AGENT (Stephani, Nancy, Siska, Lena)
+       │
+       │ executes, writes report
+       ▼
+/home/bangnevgo/AI-Team/shared-memory/hermes/in/
+       │
+       │ Hermes reads when ready
+       ▼
+HERMES processes response
+```
+
+**Keuntungan arsitektur baru:**
+- Non-blocking — agent baca kapan ready
+- No polling — async, event-based via filesystem
+- Hermes bisa queue commands
+- Agent punya identity sendiri
+- Lebih robust dan natural untuk async workflow
+
+## Struktur Folder Baru
+
+```
+AI-Team/shared-memory/
+├── hermes/
+│   ├── out/                    # Commands dari Hermes ke agent
+│   ├── in/                     # Reports dari agent ke Hermes
+│   ├── memory/                  # Hermes memory
+│   └── .openclaw/              # OpenClaw workspace state
+└── openclaw/
+    └── {agent-id}/in/          # Per-agent inbox
+        ├── stephani-the-social-media-manager/
+        ├── nancy-lead-manager/
+        ├── siska-finance-advertising-manager/
+        └── lena-website-manager/
+```
+
+## Communication Pattern
+
+### Hermes → OpenClaw Agent (Command)
+1. Hermes write command file ke `hermes/out/`
+2. Agent baca dari inbox masing-masing saat startup
+3. Format: `YYYYMMDD_HHMMSS_command.md`
+
+### OpenClaw Agent → Hermes (Report)
+1. Agent write report ke `hermes/in/`
+2. Hermes baca dari situ saat ready
+3. Format filename: `laporan_YYYYMMDD_dari_{agent-id}.md`
+
+```markdown
+FROM:{agent-id}
+TO:hermes
+TYPE:laporan
+---
+{isi laporan}
+```
+
+## Hermes = Brain, OpenClaw = Hands
+
+| Komponen | Role | Description |
+|----------|------|-------------|
+| **HERMES** | Otak (Chief of Staff) | Deep thinking, self-learning, coordinates, reports |
+| **hermes-aja** | Avatar | Hermes "nongkrong" di OpenClaw ecosystem |
+| **OPENCLAW AGENTS** | Tangan (Execution) | Executes what Hermes plans |
+
+## Agents yang Terintegrasi
+
+| Agent | Fungsi | Hermes Bridge |
+|-------|--------|---------------|
+| Stephani | Social Media Manager | ✅ Active |
+| Nancy | Lead Manager | ✅ Active |
+| Siska | Finance & Ads Manager | ✅ Active |
+| Lena | Website Manager | ✅ Active |
+
+## Setup Hermes Bridge Baru
+
+### 1. Hermes TOOLS.md (Hermes side)
+```markdown
+## Hermes Bridge — Kirim Perintah ke OpenClaw Agent
+Path: /home/bangnevgo/AI-Team/shared-memory/hermes/out/
+Format: command_YYYYMMDD_HHMMSS.md
+```
+
+### 2. Agent TOOLS.md (OpenClaw side)
+```markdown
+## HERMES BRIDGE — Kirim Laporan Ke Hermes
+Path: /home/bangnevgo/AI-Team/shared-memory/hermes/in/
+Format: laporan_YYYYMMDD_dari_{agent-id}.md
+```
+
+## Requirement
+
+- Hermes Agent CLI (`hermes`)
+- OpenClaw dengan workspace agents
+- Shared folder: `/home/bangnevgo/AI-Team/shared-memory/`
+
+## Referensi
+
+- [OpenClaw Agent Skills](https://github.com/bangnevgo/OpenClaw-Agent-Skills) — Dokumentasi lengkap agents & skills
+- [NEVGO Ecosystem Framework](https://github.com/bangnevgo/NEVGO-Ecosystem-Framework) — Arsitektur lengkap
 
 ## Author
 
