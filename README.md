@@ -25,7 +25,7 @@ HERMES (Brain)
        │
        │ writes command
        ▼
-/home/bangnevgo/AI-Team/shared-memory/hermes/out/
+/AI-Team/shared-memory/hermes/out/
        │
        │ agent reads at startup
        ▼
@@ -34,7 +34,7 @@ OPENCLAW AGENT (Execution)
        │ executes
        │ writes report
        ▼
-/home/bangnevgo/AI-Team/shared-memory/hermes/in/
+/AI-Team/shared-memory/hermes/in/
        │
        │ Hermes reads when ready
        ▼
@@ -110,14 +110,14 @@ Most people migrate from OpenClaw to Hermes. This approach instead:
 
 ### Hermes Side (TOOLS.md)
 ```markdown
-## Hermes Bridge — Kirim Perintah ke OpenClaw Agent
-Path: /home/bangnevgo/AI-Team/shared-memory/hermes/out/
+## Hermes Bridge — Send Command to OpenClaw Agent
+Path: /AI-Team/shared-memory/hermes/out/
 ```
 
 ### OpenClaw Agent Side (TOOLS.md)
 ```markdown
-## HERMES BRIDGE — Kirim Laporan Ke Hermes
-Path: /home/bangnevgo/AI-Team/shared-memory/hermes/in/
+## Hermes Bridge — Send Report to Hermes
+Path: /AI-Team/shared-memory/hermes/in/
 Format: laporan_YYYYMMDD_dari_{agent-id}.md
 ```
 
@@ -125,7 +125,7 @@ Format: laporan_YYYYMMDD_dari_{agent-id}.md
 
 - Hermes Agent CLI (`hermes`)
 - OpenClaw with workspace agents
-- Shared folder: `/home/bangnevgo/AI-Team/shared-memory/`
+- Shared folder: `/AI-Team/shared-memory/`
 
 ## References
 
