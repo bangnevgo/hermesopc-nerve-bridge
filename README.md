@@ -1,32 +1,27 @@
-# HermesOPC-Nerve-Bridge
+# Hermes-OpenClaw Orchestration
 
-> ⚠️ **DEPRECATED** — Arsitektur ini sudah tidak digunakan.
-> Lihat [OpenClaw Agent Skills.md](https://github.com/bangnevgo/OpenClaw-Agent-Skills) untuk arsitektur terbaru.
-
----
-
-Integrasi **Hermes Agent (Python CLI)** ke dalam **Nerve UI (OpenClaw)** menggunakan arsitektur file-based bridge.
-
-## Arsitektur Lama (Deprecated)
-
-```
-Nerve UI → OpenClaw Agent (hermes-aja) → incoming/request.json 
-   → bridge_service.py (polling 2 detik) → Hermes CLI 
-   → outgoing/response_nerve_req.json → OpenClaw Agent → Nerve UI
-```
-
-**Masalah dengan arsitektur lama:**
-- Blocking: agent harus tunggu 5 detik
-- Polling: bridge_service.py harus polling terus
-- Fragile: timing-dependent, bisa miss kalau polling slow
-- hermes-aja tidak punya identitas sendiri — hanya relay
+> **Pioneering Architecture** — Hermes (Brain) orchestrates OpenClaw (Hands) agents via shared folder communication.
 
 ---
 
-## Arsitektur Baru (2026-04-27)
+## Concept
+
+**Hermes = Brain (Chief of Staff)**
+- Deep thinking + self-learning
+- Plans, coordinates, reports
+- Direct access to terminal, file, web, VPS
+
+**OpenClaw = Hands (Execution Layer)**
+- Specialized agents execute what Hermes plans
+- Stephani (Social), Nancy (Lead), Siska (Finance), Lena (Website)
+- Each agent has its own identity and skills
+
+**hermes-aja = Avatar**
+- Hermes "present" in OpenClaw ecosystem
+- Not a separate agent — it's Hermes via shared folder bridge
 
 ```
-HERMES (Brain — Chief of Staff)
+HERMES (Brain)
        │
        │ writes command
        ▼
@@ -34,104 +29,108 @@ HERMES (Brain — Chief of Staff)
        │
        │ agent reads at startup
        ▼
-OPENCLAW AGENT (Stephani, Nancy, Siska, Lena)
+OPENCLAW AGENT (Execution)
        │
-       │ executes, writes report
+       │ executes
+       │ writes report
        ▼
 /home/bangnevgo/AI-Team/shared-memory/hermes/in/
        │
        │ Hermes reads when ready
        ▼
-HERMES processes response
+HERMES processes & coordinates
 ```
 
-**Keuntungan arsitektur baru:**
-- Non-blocking — agent baca kapan ready
-- No polling — async, event-based via filesystem
-- Hermes bisa queue commands
-- Agent punya identity sendiri
-- Lebih robust dan natural untuk async workflow
+## Why This Pattern?
 
-## Struktur Folder Baru
+| Old Pattern (Deprecated) | New Pattern |
+|------------------------|-------------|
+| Blocking: wait 5 seconds | Non-blocking: async |
+| Polling required | No polling |
+| hermes-aja = relay only | Agent has own identity |
+| Timing-dependent | Queue-based |
+| Fragile | Robust |
 
-```
-AI-Team/shared-memory/
-├── hermes/
-│   ├── out/                    # Commands dari Hermes ke agent
-│   ├── in/                     # Reports dari agent ke Hermes
-│   ├── memory/                  # Hermes memory
-│   └── .openclaw/              # OpenClaw workspace state
-└── openclaw/
-    └── {agent-id}/in/          # Per-agent inbox
-        ├── stephani-the-social-media-manager/
-        ├── nancy-lead-manager/
-        ├── siska-finance-advertising-manager/
-        └── lena-website-manager/
-```
-
-## Communication Pattern
+## Communication Flow
 
 ### Hermes → OpenClaw Agent (Command)
-1. Hermes write command file ke `hermes/out/`
-2. Agent baca dari inbox masing-masing saat startup
-3. Format: `YYYYMMDD_HHMMSS_command.md`
+1. Hermes writes command to `hermes/out/`
+2. Agent reads from inbox at startup
+3. Format: `command_YYYYMMDD_HHMMSS.md`
 
 ### OpenClaw Agent → Hermes (Report)
-1. Agent write report ke `hermes/in/`
-2. Hermes baca dari situ saat ready
-3. Format filename: `laporan_YYYYMMDD_dari_{agent-id}.md`
+1. Agent writes report to `hermes/in/`
+2. Hermes reads when ready
+3. Format: `laporan_YYYYMMDD_dari_{agent-id}.md`
 
 ```markdown
 FROM:{agent-id}
 TO:hermes
 TYPE:laporan
 ---
-{isi laporan}
+{report content}
 ```
 
-## Hermes = Brain, OpenClaw = Hands
+## Folder Structure
 
-| Komponen | Role | Description |
-|----------|------|-------------|
-| **HERMES** | Otak (Chief of Staff) | Deep thinking, self-learning, coordinates, reports |
-| **hermes-aja** | Avatar | Hermes "nongkrong" di OpenClaw ecosystem |
-| **OPENCLAW AGENTS** | Tangan (Execution) | Executes what Hermes plans |
+```
+AI-Team/shared-memory/
+├── hermes/
+│   ├── out/              # Commands from Hermes
+│   ├── in/                # Reports to Hermes
+│   └── memory/            # Hermes memory
+└── openclaw/
+    └── {agent-id}/in/    # Per-agent inbox
+        ├── stephani-the-social-media-manager/
+        ├── nancy-lead-manager/
+        ├── siska-finance-advertising-manager/
+        └── lena-website-manager/
+```
 
-## Agents yang Terintegrasi
+## Integrated Agents
 
-| Agent | Fungsi | Hermes Bridge |
-|-------|--------|---------------|
-| Stephani | Social Media Manager | ✅ Active |
-| Nancy | Lead Manager | ✅ Active |
-| Siska | Finance & Ads Manager | ✅ Active |
-| Lena | Website Manager | ✅ Active |
+| Agent | Role | Status |
+|-------|------|--------|
+| **Stephani** | Social Media Manager | ✅ Active |
+| **Nancy** | Lead Manager | ✅ Active |
+| **Siska** | Finance & Ads Manager | ✅ Active |
+| **Lena** | Website Manager | ✅ Active |
+| **SiSuz** | Orchestrator | ⚠️ Verify |
 
-## Setup Hermes Bridge Baru
+## Pioneer Status
 
-### 1. Hermes TOOLS.md (Hermes side)
+This architecture was **discovered and implemented on 2026-04-27**.
+
+Most people migrate from OpenClaw to Hermes. This approach instead:
+- Keeps Hermes as the strategic brain
+- Uses OpenClaw as distributed execution layer
+- Pioneers shared folder orchestration pattern
+
+## Setup
+
+### Hermes Side (TOOLS.md)
 ```markdown
 ## Hermes Bridge — Kirim Perintah ke OpenClaw Agent
 Path: /home/bangnevgo/AI-Team/shared-memory/hermes/out/
-Format: command_YYYYMMDD_HHMMSS.md
 ```
 
-### 2. Agent TOOLS.md (OpenClaw side)
+### OpenClaw Agent Side (TOOLS.md)
 ```markdown
 ## HERMES BRIDGE — Kirim Laporan Ke Hermes
 Path: /home/bangnevgo/AI-Team/shared-memory/hermes/in/
 Format: laporan_YYYYMMDD_dari_{agent-id}.md
 ```
 
-## Requirement
+## Requirements
 
 - Hermes Agent CLI (`hermes`)
-- OpenClaw dengan workspace agents
+- OpenClaw with workspace agents
 - Shared folder: `/home/bangnevgo/AI-Team/shared-memory/`
 
-## Referensi
+## References
 
-- [OpenClaw Agent Skills](https://github.com/bangnevgo/OpenClaw-Agent-Skills) — Dokumentasi lengkap agents & skills
-- [NEVGO Ecosystem Framework](https://github.com/bangnevgo/NEVGO-Ecosystem-Framework) — Arsitektur lengkap
+- [OpenClaw Agent Skills](https://github.com/bangnevgo/OpenClaw-Agent-Skills) — Full agent documentation
+- [NEVGO Ecosystem Framework](https://github.com/bangnevgo/NEVGO-Ecosystem-Framework) — Complete architecture
 
 ## Author
 
